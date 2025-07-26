@@ -1,0 +1,65 @@
+name: start
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: 'Runner Image'
+        required: true
+        type: choice
+        options:
+          - windows-11-arm
+          - windows-2022
+          - windows-2025
+          - windows-latest
+        default: windows-latest
+      msystem:
+        description: 'MSYS2 Environment'
+        required: true
+        type: choice
+        options:
+          - CLANGARM64
+          - MINGW64
+          - MINGW32
+          - UCRT64
+          - CLANG64
+          - MSYS
+        default: UCRT64
+      install:
+        description: 'Packages to install'
+        required: false
+        type: string
+        default: 'git'
+
+permissions: {}
+
+jobs:
+  main:
+    runs-on: ${{ inputs.os }}
+
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        persist-credentials: false
+
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      id: setup-msys2
+      with:
+        update: true
+        install: ${{ inputs.install }}
+
+    - shell: msys2 {0}
+      env:
+        MSYSTEM: ${{ inputs.msystem }}
+      run: |
+        sed -i "1i\MSYSTEM=$MSYSTEM" /etc/profile
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        msys2-location: ${{ steps.setup-msys2.outputs.msys2-location }}
+        limit-access-to-actor: true
